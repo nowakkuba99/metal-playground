@@ -12,22 +12,7 @@
 #include <AppKit/AppKit.hpp>
 #include <MetalKit/MetalKit.hpp>
 
-class Renderer {
-public:
-    Renderer(MTL::Device* device) : p_device(device->retain()) {
-        p_commandQueue = p_device->newCommandQueue();
-    }
-    ~Renderer() {
-        p_device->release();
-        p_commandQueue->release();
-    }
-    void draw(MTK::View* view);
-private:
-    MTL::Device* p_device;
-    MTL::CommandQueue* p_commandQueue;
-};
-
-
+#include "../Renderer/Renderer.hpp"
 
 
 // Provides an interface where MTK::View can forward events
