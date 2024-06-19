@@ -28,6 +28,8 @@ public:
         p_PSO->release();
         p_vertexPositionsBuffer->release();
         p_fragmentColorsBuffer->release();
+        p_shaderLibrary->release();
+        p_argumentBuffer->release();
     }
     /**
      Builds a MTL::RenderPipelineState object from a pair of vertex and fragment shaders
@@ -47,6 +49,8 @@ private:
     // second for colors for each vertex
     MTL::Buffer* p_vertexPositionsBuffer;
     MTL::Buffer* p_fragmentColorsBuffer;
+    MTL::Library* p_shaderLibrary;
+    MTL::Buffer* p_argumentBuffer;
 };
 
 #endif /* Renderer_hpp */

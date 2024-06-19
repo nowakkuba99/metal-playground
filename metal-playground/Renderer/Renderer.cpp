@@ -17,8 +17,12 @@ void Renderer::draw(MTK::View* view) {
     
     // Add commands to draw triangle from buffer
     enc->setRenderPipelineState(p_PSO);
-    enc->setVertexBuffer(p_vertexPositionsBuffer, 0, 0);
-    enc->setVertexBuffer(p_fragmentColorsBuffer, 0, 1);
+//    enc->setVertexBuffer(p_vertexPositionsBuffer, 0, 0);
+//    enc->setVertexBuffer(p_fragmentColorsBuffer, 0, 1);
+    // Use argument buffer
+    enc->setVertexBuffer(p_argumentBuffer, 0, 0);
+    enc->useResource(p_vertexPositionsBuffer, MTL::ResourceUsageRead);
+    enc->useResource(p_fragmentColorsBuffer, MTL::ResourceUsageRead);
     enc->drawPrimitives(MTL::PrimitiveType::PrimitiveTypeTriangle, NS::UInteger(0), NS::UInteger(3));
     
     enc->endEncoding();
@@ -43,13 +47,17 @@ void Renderer::buildShaders() {
             half3 color;
         };
 
-        v2f vertex vertexMain( uint vertexId [[vertex_id]],
-                               device const float3* positions [[buffer(0)]],
-                               device const float3* colors [[buffer(1)]] )
+        struct VertexData
+        {
+            device float3* positions [[id(0)]];
+            device float3* colors [[id(1)]];
+        };
+
+        v2f vertex vertexMain( device const VertexData* vertexData [[buffer(0)]], uint vertexId [[vertex_id]] )
         {
             v2f o;
-            o.position = float4( positions[ vertexId ], 1.0 );
-            o.color = half3 ( colors[ vertexId ] );
+            o.position = float4( vertexData->positions[ vertexId ], 1.0 );
+            o.color = half3(vertexData->colors[ vertexId ]);
             return o;
         }
 
@@ -87,7 +95,8 @@ void Renderer::buildShaders() {
     vertexFn->release();
     fragmentFn->release();
     desc->release();
-    library->release();
+//    library->release();
+    p_shaderLibrary = library;
 }
 
 void Renderer::buildBuffers() {
@@ -125,4 +134,21 @@ void Renderer::buildBuffers() {
     p_vertexPositionsBuffer->didModifyRange(NS::Range::Make(0, p_vertexPositionsBuffer->length()));
     p_fragmentColorsBuffer->didModifyRange(NS::Range::Make(0, p_fragmentColorsBuffer->length()));
     
+    using NS::StringEncoding::UTF8StringEncoding;
+    // Add argument buffer
+    assert(p_shaderLibrary);
+    MTL::Function* vertexFn = p_shaderLibrary->newFunction(NS::String::string("vertexMain",UTF8StringEncoding));
+    MTL::ArgumentEncoder* argumentEnc = vertexFn->newArgumentEncoder(0);
+    MTL::Buffer* argBuffer = p_device->newBuffer( argumentEnc->encodedLength(), MTL::ResourceStorageModeManaged );
+    p_argumentBuffer = argBuffer;
+
+    argumentEnc->setArgumentBuffer( argBuffer, 0 );
+
+    argumentEnc->setBuffer( p_vertexPositionsBuffer, 0, 0 );
+    argumentEnc->setBuffer( p_fragmentColorsBuffer, 0, 1 );
+
+    p_argumentBuffer->didModifyRange( NS::Range::Make( 0, p_argumentBuffer->length() ) );
+
+    vertexFn->release();
+    argumentEnc->release();
 }
